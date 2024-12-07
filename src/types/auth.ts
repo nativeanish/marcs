@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+// Base profile type that all providers must implement
+export const BaseProfileSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  name: z.string(),
+  picture: z.string().url().optional(),
+});
+
+export type BaseProfile = z.infer<typeof BaseProfileSchema>;
+
 // Provider-specific profile types
 export const GoogleProfileSchema = z.object({
   sub: z.string(),
@@ -30,11 +40,11 @@ export const ProviderConfigSchema = z.object({
   supportsPKCE: z.boolean().default(false),
   supportsRefreshTokens: z.boolean().default(false),
   customParams: z.record(z.string()).default({}),
-  profile: z
+  profile: z.function().args(z.any()).returns(z.custom<BaseProfile>()),
+  getProfile: z
     .function()
-    .args(z.any())
-    .returns(z.record(z.any()))
-    .default((data: any) => data),
+    .args(z.object({ access_token: z.string() }))
+    .returns(z.promise(z.custom<BaseProfile>())),
 });
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;

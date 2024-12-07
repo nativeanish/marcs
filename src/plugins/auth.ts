@@ -7,7 +7,7 @@ import {
 import fp from "fastify-plugin";
 import { providers } from "../providers";
 import { generateAuthUrl, exchangeToken } from "../utils/auth-utils";
-import { TokenResponseSchema, AuthState } from "../types/auth";
+import { TokenResponseSchema, AuthState, BaseProfile } from "../types/auth";
 import createError from "@fastify/error";
 
 const AuthError = createError("AUTH_ERROR", "%s", 400);
@@ -15,6 +15,7 @@ const AuthError = createError("AUTH_ERROR", "%s", 400);
 declare module "fastify" {
   interface Session {
     authState?: AuthState;
+    user?: BaseProfile;
   }
 }
 
@@ -87,17 +88,34 @@ const authPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
         const validatedToken = TokenResponseSchema.parse(tokenData);
 
-        // Clear sensitive session data
+        // Fetch user profile
+        const userProfile = await provider.getProfile({
+          access_token: validatedToken.access_token,
+        });
+
+        // Store user profile in session
+        request.session.user = userProfile;
         request.session.authState = undefined;
         await request.session.save();
 
-        return validatedToken;
+        return { user: userProfile, ...validatedToken };
       } catch (error) {
         fastify.log.error(error);
-        throw new AuthError("Token exchange failed");
+        throw new AuthError("Authentication failed");
       }
     }
   );
+
+  // Get current user
+  fastify.get("/api/auth/session", async (request) => {
+    return { user: request.session.user || null };
+  });
+
+  // Logout
+  fastify.post("/api/auth/logout", async (request, reply) => {
+    request.session.destroy();
+    return reply.send({ success: true });
+  });
 
   // Error handler
   fastify.setErrorHandler((error, request, reply) => {

@@ -1,24 +1,24 @@
-import { config } from "dotenv";
+import dotenv from "dotenv";
+dotenv.config();
+
+import { config, isDev } from "./config";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import cookie from "@fastify/cookie";
 import session from "@fastify/session";
-import crypto from "crypto";
 import authPlugin from "./plugins/auth";
 
-config();
-
 const fastify = Fastify({
-  logger: true,
+  logger: isDev,
   trustProxy: true,
 });
 
 // Security plugins
 fastify.register(helmet);
 fastify.register(cors, {
-  origin: process.env.ALLOWED_ORIGINS?.split(",") || false,
+  origin: config.ALLOWED_ORIGINS,
   credentials: true,
 });
 fastify.register(rateLimit, {
@@ -29,9 +29,9 @@ fastify.register(rateLimit, {
 // Session handling
 fastify.register(cookie);
 fastify.register(session, {
-  secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex"),
+  secret: config.SESSION_SECRET,
   cookie: {
-    secure: process.env.NODE_ENV === "production",
+    secure: !isDev,
     httpOnly: true,
     sameSite: "lax",
   },
@@ -46,7 +46,7 @@ fastify.get("/health", async () => ({ status: "ok" }));
 const start = async () => {
   try {
     await fastify.listen({
-      port: parseInt(process.env.PORT || "3000"),
+      port: parseInt(config.PORT),
       host: "0.0.0.0",
     });
   } catch (err) {
