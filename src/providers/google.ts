@@ -1,6 +1,7 @@
 import { createProvider } from "./provider-template";
+import { type ProviderConfig } from "../types/auth";
 
-export const googleProvider = createProvider({
+const googleConfig: ProviderConfig = {
   id: "google",
   name: "Google",
   authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -12,10 +13,13 @@ export const googleProvider = createProvider({
   scope: "openid email profile",
   supportsPKCE: true,
   supportsRefreshTokens: true,
-  profile: (data) => ({
+  customParams: {}, // Required by ProviderConfig type
+  profile: (data: any) => ({
     id: data.sub,
     email: data.email,
     name: data.name,
     picture: data.picture,
   }),
-});
+};
+
+export const googleProvider = createProvider(googleConfig);
