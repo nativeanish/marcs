@@ -15,7 +15,8 @@ export const generateState = (): string => {
 
 export const generateAuthUrl = (
   provider: ProviderConfig,
-  redirectUri: string
+  redirectUri: string,
+  additionalParams: Record<string, string> = {}
 ): { url: string; codeVerifier?: string; state: string } => {
   const state = generateState();
 
@@ -26,6 +27,7 @@ export const generateAuthUrl = (
     scope: provider.scope,
     state,
     ...provider.customParams,
+    ...additionalParams,
   };
 
   let codeVerifier: string | undefined;

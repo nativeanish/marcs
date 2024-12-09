@@ -33,22 +33,28 @@ const authPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       }
 
       const redirectUri = `${request.protocol}://${request.hostname}/api/auth/${provider.id}/callback`;
-      const { url, codeVerifier, state } = generateAuthUrl(
-        provider,
-        redirectUri
-      );
 
-      // Store PKCE and state in session
-      const authState: AuthState = {
-        codeVerifier,
-        state,
-        provider: providerId,
-      };
+      try {
+        // Use custom sign-in if available, otherwise fall back to default
+        const { url, codeVerifier, state } = provider.signIn
+          ? await provider.signIn({ redirectUri })
+          : generateAuthUrl(provider, redirectUri);
 
-      request.session.authState = authState;
-      await request.session.save();
+        // Store PKCE and state in session
+        const authState: AuthState = {
+          codeVerifier,
+          state,
+          provider: providerId,
+        };
 
-      return reply.redirect(url);
+        request.session.authState = authState;
+        await request.session.save();
+
+        return reply.redirect(url);
+      } catch (error) {
+        fastify.log.error(error);
+        throw new AuthError("Failed to generate authentication URL");
+      }
     }
   );
 

@@ -27,6 +27,14 @@ export const MicrosoftProfileSchema = z.object({
 export type GoogleProfile = z.infer<typeof GoogleProfileSchema>;
 export type MicrosoftProfile = z.infer<typeof MicrosoftProfileSchema>;
 
+// Custom sign-in options type
+export const SignInOptionsSchema = z.object({
+  redirectUri: z.string().url(),
+  customParams: z.record(z.string()).optional(),
+});
+
+export type SignInOptions = z.infer<typeof SignInOptionsSchema>;
+
 // Common provider configuration
 export const ProviderConfigSchema = z.object({
   id: z.string(),
@@ -45,6 +53,19 @@ export const ProviderConfigSchema = z.object({
     .function()
     .args(z.object({ access_token: z.string() }))
     .returns(z.promise(z.custom<BaseProfile>())),
+  signIn: z
+    .function()
+    .args(SignInOptionsSchema)
+    .returns(
+      z.promise(
+        z.object({
+          url: z.string(),
+          codeVerifier: z.string().optional(),
+          state: z.string(),
+        })
+      )
+    )
+    .optional(),
 });
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
